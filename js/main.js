@@ -438,3 +438,72 @@ window.addEventListener('scroll', () => {
 window.addEventListener('load', () => {
   document.body.classList.add('loaded');
 });
+
+// ========================================
+// SHARE CERTIFICATE MODAL
+// ========================================
+let currentShareTitle = '';
+
+function shareCertificate(title) {
+  currentShareTitle = title;
+  const modal = document.getElementById('shareModal');
+  const titleEl = document.getElementById('shareTitle');
+  
+  titleEl.textContent = `Share "${title}" on social media`;
+  modal.classList.add('active');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeShareModal() {
+  const modal = document.getElementById('shareModal');
+  modal.classList.remove('active');
+  document.body.style.overflow = '';
+}
+
+function getShareUrl() {
+  return window.location.href;
+}
+
+function shareToLinkedIn() {
+  const url = encodeURIComponent(getShareUrl());
+  const title = encodeURIComponent(currentShareTitle);
+  window.open(`https://www.linkedin.com/sharing/share-offsite/?url=${url}`, '_blank', 'width=600,height=400');
+}
+
+function shareToTwitter() {
+  const url = encodeURIComponent(getShareUrl());
+  const title = encodeURIComponent(`Check out this certificate: ${currentShareTitle}`);
+  window.open(`https://twitter.com/intent/tweet?url=${url}&text=${title}`, '_blank', 'width=600,height=400');
+}
+
+function shareToWhatsApp() {
+  const url = encodeURIComponent(getShareUrl());
+  const title = encodeURIComponent(`Check out this certificate: ${currentShareTitle}\n${getShareUrl()}`);
+  window.open(`https://wa.me/?text=${title}`, '_blank');
+}
+
+function copyShareLink() {
+  const linkInput = document.getElementById('shareLink');
+  const feedback = document.getElementById('copyFeedback');
+  
+  navigator.clipboard.writeText(getShareUrl()).then(() => {
+    feedback.classList.add('show');
+    setTimeout(() => {
+      feedback.classList.remove('show');
+    }, 3000);
+  });
+}
+
+// Close modal on outside click
+document.getElementById('shareModal').addEventListener('click', function(e) {
+  if (e.target === this) {
+    closeShareModal();
+  }
+});
+
+// Close modal on Escape key
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') {
+    closeShareModal();
+  }
+});
