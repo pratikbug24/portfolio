@@ -507,3 +507,61 @@ document.addEventListener('keydown', function(e) {
     closeShareModal();
   }
 });
+
+// ========================================
+// FORMSPREE CONTACT FORM
+// ========================================
+const contactForm = document.getElementById('contact-form');
+
+if (contactForm) {
+  contactForm.addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    const submitBtn = this.querySelector('.btn-submit');
+    const originalContent = submitBtn.innerHTML;
+    
+    // Show loading state
+    submitBtn.classList.add('loading');
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '<span>Sending...</span><div class="loader"></div>';
+    
+    try {
+      const formData = new FormData(this);
+      const response = await fetch(this.action, {
+        method: 'POST',
+        body: formData,
+        headers: {
+          'Accept': 'application/json'
+        }
+      });
+      
+      if (response.ok) {
+        // Success
+        submitBtn.innerHTML = '<span>Message Sent!</span><i class="fas fa-check"></i>';
+        submitBtn.style.background = 'linear-gradient(135deg, #10b981 0%, #059669 100%)';
+        this.reset();
+        
+        // Reset after 3 seconds
+        setTimeout(() => {
+          submitBtn.innerHTML = originalContent;
+          submitBtn.style.background = '';
+          submitBtn.disabled = false;
+          submitBtn.classList.remove('loading');
+        }, 3000);
+      } else {
+        throw new Error('Form submission failed');
+      }
+    } catch (error) {
+      // Error
+      submitBtn.innerHTML = '<span>Error! Try Again</span><i class="fas fa-exclamation-circle"></i>';
+      submitBtn.style.background = 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)';
+      
+      setTimeout(() => {
+        submitBtn.innerHTML = originalContent;
+        submitBtn.style.background = '';
+        submitBtn.disabled = false;
+        submitBtn.classList.remove('loading');
+      }, 3000);
+    }
+  });
+}
