@@ -3,7 +3,9 @@
 // ========================================
 document.addEventListener('DOMContentLoaded', () => {
   initParticles();
-  initAOS();
+  initMotionReveals();
+  initMotionStagger();
+  initMotionParallax();
   initCustomCursor();
   initNavbar();
   initTypewriter();
@@ -13,65 +15,325 @@ document.addEventListener('DOMContentLoaded', () => {
   initContactForm();
   initBackToTop();
   initSmoothScroll();
+  initScrollProgress();
+  initCardTilt();
+  initThemeSwitcher();
   setCurrentYear();
 });
+
+// ========================================
+// THEME HELPERS
+// ========================================
+function getCssVar(name) {
+  return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+}
+
+function currentThemeName() {
+  return document.documentElement.getAttribute('data-theme') || 'indigo';
+}
+
+// ========================================
+// THEME SWITCHER
+// ========================================
+function initThemeSwitcher() {
+  const toggle = document.getElementById('themeToggle');
+  const panel = document.getElementById('themePanel');
+  const options = document.querySelectorAll('.theme-option');
+  if (!toggle || !panel) return;
+
+  const markActive = (name) => {
+    options.forEach(opt => {
+      opt.classList.toggle('active', opt.getAttribute('data-theme-value') === name);
+    });
+  };
+
+  markActive(currentThemeName());
+
+  toggle.addEventListener('click', () => {
+    const open = panel.classList.toggle('open');
+    toggle.setAttribute('aria-expanded', String(open));
+  });
+
+  options.forEach(opt => {
+    opt.addEventListener('click', () => {
+      const name = opt.getAttribute('data-theme-value');
+      document.documentElement.setAttribute('data-theme', name);
+      try { localStorage.setItem('portfolio-theme', name); } catch (e) {}
+      markActive(name);
+      initParticles();
+
+      const icon = toggle.querySelector('i');
+      if (icon) {
+        icon.style.transform = 'rotate(360deg)';
+        setTimeout(() => { icon.style.transform = ''; }, 400);
+      }
+    });
+  });
+
+  document.addEventListener('click', (e) => {
+    if (!e.target.closest('.theme-switcher')) {
+      panel.classList.remove('open');
+      toggle.setAttribute('aria-expanded', 'false');
+    }
+  });
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      panel.classList.remove('open');
+      toggle.setAttribute('aria-expanded', 'false');
+    }
+  });
+}
+
+// ========================================
+// SCROLL PROGRESS BAR (Motion scroll())
+// ========================================
+function initScrollProgress() {
+  const progress = document.getElementById('scrollProgress');
+  if (!progress) return;
+
+  if (window.Motion && window.Motion.scroll) {
+    Motion.scroll(Motion.animate(progress, { scaleX: [0, 1] }));
+    return;
+  }
+
+  const update = () => {
+    const scrollable = document.documentElement.scrollHeight - window.innerHeight;
+    const percent = scrollable > 0 ? (window.scrollY / scrollable) * 100 : 0;
+    progress.style.width = percent + '%';
+  };
+
+  window.addEventListener('scroll', update, { passive: true });
+  window.addEventListener('resize', update);
+  update();
+}
+
+// ========================================
+// SUBTLE 3D TILT ON CARDS
+// ========================================
+function initCardTilt() {
+  const canHover = window.matchMedia('(hover: hover) and (pointer: fine)').matches;
+  const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if (!canHover || reduceMotion) return;
+
+  document.querySelectorAll('.project-card, .certificate-card, .skill-card').forEach(card => {
+    card.addEventListener('mouseenter', () => {
+      card.style.transition = 'transform 0.15s ease-out, box-shadow 0.3s ease';
+    });
+
+    card.addEventListener('mousemove', (e) => {
+      const rect = card.getBoundingClientRect();
+      const x = (e.clientX - rect.left) / rect.width - 0.5;
+      const y = (e.clientY - rect.top) / rect.height - 0.5;
+      card.style.transform =
+        `perspective(900px) rotateX(${(-y * 5).toFixed(2)}deg) rotateY(${(x * 5).toFixed(2)}deg) translateY(-12px)`;
+    });
+
+    card.addEventListener('mouseleave', () => {
+      card.style.transition = '';
+      card.style.transform = '';
+    });
+  });
+}
 
 // ========================================
 // PARTICLES BACKGROUND
 // ========================================
 function initParticles() {
-  if (typeof particlesJS !== 'undefined') {
-    particlesJS('particles-js', {
-      particles: {
-        number: { value: 50, density: { enable: true, value_area: 800 } },
-        color: { value: '#6366f1' },
-        shape: { type: 'circle', stroke: { width: 0, color: '#000' } },
-        opacity: { value: 0.3, random: true, anim: { enable: true, speed: 1, opacity_min: 0.1 } },
-        size: { value: 3, random: true, anim: { enable: true, speed: 40, size_min: 0.1 } },
-        line_linked: {
-          enable: true,
-          distance: 150,
-          color: '#6366f1',
-          opacity: 0.2,
-          width: 1
-        },
-        move: {
-          enable: true,
-          speed: 2,
-          direction: 'none',
-          random: true,
-          straight: false,
-          out_mode: 'out'
-        }
-      },
-      interactivity: {
-        detect_on: 'canvas',
-        events: {
-          onhover: { enable: true, mode: 'grab' },
-          onclick: { enable: true, mode: 'push' },
-          resize: true
-        },
-        modes: {
-          grab: { distance: 140, line_linked: { opacity: 0.5 } },
-          push: { particles_nb: 4 }
-        }
-      },
-      retina_detect: true
-    });
+  if (typeof particlesJS === 'undefined') return;
+
+  const container = document.getElementById('particles-js');
+  if (!container) return;
+
+  const primary = getCssVar('--primary') || '#6366f1';
+  const secondary = getCssVar('--secondary') || '#ec4899';
+
+  // Reset any previously rendered canvas so colours update on theme change.
+  container.innerHTML = '';
+  if (window.pJSDom && window.pJSDom.length) {
+    window.pJSDom = [];
   }
+
+  particlesJS('particles-js', {
+    particles: {
+      number: { value: 50, density: { enable: true, value_area: 800 } },
+      color: { value: [primary, secondary] },
+      shape: { type: 'circle', stroke: { width: 0, color: '#000' } },
+      opacity: { value: 0.3, random: true, anim: { enable: true, speed: 1, opacity_min: 0.1 } },
+      size: { value: 3, random: true, anim: { enable: true, speed: 40, size_min: 0.1 } },
+      line_linked: {
+        enable: true,
+        distance: 150,
+        color: primary,
+        opacity: 0.2,
+        width: 1
+      },
+      move: {
+        enable: true,
+        speed: 2,
+        direction: 'none',
+        random: true,
+        straight: false,
+        out_mode: 'out'
+      }
+    },
+    interactivity: {
+      detect_on: 'canvas',
+      events: {
+        onhover: { enable: true, mode: 'grab' },
+        onclick: { enable: true, mode: 'push' },
+        resize: true
+      },
+      modes: {
+        grab: { distance: 140, line_linked: { opacity: 0.5 } },
+        push: { particles_nb: 4 }
+      }
+    },
+    retina_detect: true
+  });
 }
 
 // ========================================
-// AOS ANIMATION
+// MOTION — SCROLL-TRIGGERED REVEALS
 // ========================================
-function initAOS() {
-  if (typeof AOS !== 'undefined') {
-    AOS.init({
-      duration: 800,
-      easing: 'ease-out-cubic',
-      once: true,
-      offset: 100
+const REVEAL_OFFSETS = {
+  up: { y: 48, x: 0 },
+  down: { y: -48, x: 0 },
+  left: { x: -64, y: 0 },
+  right: { x: 64, y: 0 }
+};
+
+// Safety net: if an element that is already inside the viewport never
+// animated (failed CDN, throttled tab, JS error), force it visible so
+// content can never be stuck hidden. Below-fold elements are left alone
+// so their scroll reveals still fire normally.
+function revealFallback(nodeLists) {
+  window.setTimeout(() => {
+    nodeLists.forEach(nodes => {
+      nodes.forEach(el => {
+        const rect = el.getBoundingClientRect();
+        const inViewport = rect.top < window.innerHeight && rect.bottom > 0;
+        const hidden = parseFloat(window.getComputedStyle(el).opacity) < 0.05;
+        if (inViewport && hidden) {
+          el.style.opacity = '1';
+          el.style.transform = 'none';
+          el.style.willChange = 'auto';
+        }
+      });
     });
+  }, 2500);
+}
+
+function showImmediately(elements) {
+  elements.forEach(el => {
+    el.style.opacity = '1';
+    el.style.transform = 'none';
+    el.style.willChange = 'auto';
+  });
+}
+
+function initMotionReveals() {
+  // Cards are handled by initMotionStagger(), so exclude them here.
+  const elements = document.querySelectorAll(
+    '[data-reveal]:not(.project-card):not(.skill-card):not(.certificate-card)'
+  );
+  if (!elements.length) return;
+
+  const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  // Without Motion (or when motion is unwelcome), show everything immediately.
+  if (!window.Motion || !Motion.inView || reduceMotion) {
+    showImmediately(elements);
+    return;
+  }
+
+  elements.forEach(el => {
+    el.style.opacity = '0';
+    el.style.willChange = 'opacity, transform';
+
+    let played = false;
+    Motion.inView(el, () => {
+      if (played) return;
+      played = true;
+      const dir = REVEAL_OFFSETS[el.getAttribute('data-reveal')] || REVEAL_OFFSETS.up;
+      const animation = Motion.animate(
+        el,
+        { opacity: [0, 1], x: [dir.x, 0], y: [dir.y, 0] },
+        { duration: 0.8, delay: 0.05, easing: [0.16, 1, 0.3, 1] }
+      );
+      if (animation && animation.finished) {
+        animation.finished.then(() => { el.style.willChange = 'auto'; });
+      }
+    }, { margin: '0px 0px -12% 0px' });
+  });
+
+  revealFallback([elements]);
+}
+
+// ========================================
+// MOTION — STAGGERED CARD ENTRANCE
+// ========================================
+function initMotionStagger() {
+  if (!window.Motion || !Motion.animate || !Motion.stagger || !Motion.inView) return;
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+
+  const groups = [
+    '.projects-grid .project-card',
+    '.skills-cards .skill-card',
+    '.certificates-grid .certificate-card'
+  ];
+
+  groups.forEach(selector => {
+    const cards = document.querySelectorAll(selector);
+    if (!cards.length) return;
+
+    cards.forEach(card => {
+      card.style.opacity = '0';
+      card.style.willChange = 'opacity, transform';
+    });
+
+    let played = false;
+    Motion.inView(cards[0], () => {
+      if (played) return;
+      played = true;
+      const animation = Motion.animate(
+        selector,
+        { opacity: [0, 1], y: [40, 0] },
+        { duration: 0.7, delay: Motion.stagger(0.08), easing: [0.16, 1, 0.3, 1] }
+      );
+      if (animation && animation.finished) {
+        animation.finished.then(() => {
+          cards.forEach(card => { card.style.willChange = 'auto'; });
+        });
+      }
+    }, { margin: '0px 0px -8% 0px' });
+  });
+
+  revealFallback(groups.map(s => document.querySelectorAll(s)));
+}
+
+// ========================================
+// MOTION — HERO PARALLAX (scroll())
+// ========================================
+function initMotionParallax() {
+  if (!window.Motion || !Motion.scroll || !Motion.animate) return;
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+
+  const heroImage = document.querySelector('.hero-image');
+  const heroText = document.querySelector('.hero-text');
+
+  if (heroImage) {
+    Motion.scroll(
+      Motion.animate(heroImage, { y: [0, 120] }, { easing: 'linear' }),
+      { target: document.querySelector('.hero'), offset: ['start start', 'end start'] }
+    );
+  }
+
+  if (heroText) {
+    Motion.scroll(
+      Motion.animate(heroText, { y: [0, -40] }, { easing: 'linear' }),
+      { target: document.querySelector('.hero'), offset: ['start start', 'end start'] }
+    );
   }
 }
 
@@ -418,19 +680,6 @@ function setCurrentYear() {
     yearElement.textContent = new Date().getFullYear();
   }
 }
-
-// ========================================
-// PARALLAX EFFECT (OPTIONAL)
-// ========================================
-window.addEventListener('scroll', () => {
-  const scrolled = window.pageYOffset;
-  const parallaxElements = document.querySelectorAll('.hero-image');
-  
-  parallaxElements.forEach(el => {
-    const speed = 0.5;
-    el.style.transform = `translateY(${scrolled * speed}px)`;
-  });
-});
 
 // ========================================
 // PRELOADER (OPTIONAL)
